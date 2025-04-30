@@ -1,0 +1,167 @@
+---
+title: Are Capital Cities More Prone to Violent Riots?
+author:
+  - name: Sonika Mahat
+    email: sm6358a@american.edu
+    main: true
+address: Data Analysis (SIS 750), American University
+main_findings:
+-  Capital cities report more riots, but the difference is not significant (p = 0.63).
+-  Key actors include security forces, demonstrators, students, and protesters.
+output: 
+  posterdown::posterdown_betterland:
+    self_contained: true
+    pandoc_args: --mathjax
+    highlight: haddock
+    number_sections: false
+link-citations: true
+bibliography: packages.bib
+---
+```{r, include=FALSE}
+knitr::opts_chunk$set(results = 'asis',
+                      echo = FALSE,
+                      warning = FALSE,
+                      tidy = FALSE,
+                      message = FALSE,
+                      fig.align = 'center',
+                      out.width = "50%")
+options(knitr.table.format = "html") 
+```
+# Introduction  
+
+Urban unrest is growing globally, and capital cities are often at the center of it. Since they concentrate political power and state institutions, they may be more exposed to unrest. One major form is organized violent riots, where violence is used in a planned way by political or identity groups.
+
+This poster explores two questions: **Are capital cities more likely to face violent riots?** And **who are the key actors involved?** The findings help us understand how city status and political tension shape urban conflict.
+
+# Objectives
+
+This research compares riot activity between capital and non-capital cities using global data. It also identifies which groups are most involved in riots in capital cities, helping us better understand how unrest takes shape in political centers.
+
+# Data and Methods
+
+The study uses the Urban Social Disorder (USD) 3.0 dataset, which includes events in over 180 cities from 1960 to 2014 (Bahgat et al., 2022). I focus on organized violent riots (PTYPE = 50) and use the `CAPITAL` variable to compare event frequency.
+
+I apply a chi-squared test to assess whether the difference between capital and non-capital cities is significant. I also examine trends over time and identify the most common actors involved in capital city riots.
+
+
+# Analysis and Result
+
+Capital cities report more violent riots in total, but the difference is not statistically significant (p = 0.63). Riot activity in capitals has increased over time, especially since the 1980s. The most involved actors are security forces, demonstrators, students, and protesters, showing that unrest in capitals involves both state and civilian groups.
+```{r results-visuals, fig.width=10, fig.height=8, echo=FALSE, message=FALSE, warning=FALSE}
+# Load required packages
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(janitor)
+library(tidyr)
+library(forcats)
+library(stringr)
+library(patchwork)
+library(kableExtra)
+
+# Load data
+events <- read_excel("events.xlsx")
+cities <- read_excel("cities.xlsx")
+
+# Merge datasets
+merged_data <- events %>%
+  left_join(select(cities, CITY_ID, CAPITAL), by = "CITY_ID")
+
+# Riot counts
+riot_data <- merged_data %>% filter(PTYPE == 50)
+riot_counts <- riot_data %>%
+  count(CAPITAL, name = "Number_of_Riots")
+
+# Plot 1: Bar chart
+plot1 <- ggplot(riot_counts, aes(x = CAPITAL, y = Number_of_Riots, fill = CAPITAL)) +
+  geom_col(show.legend = FALSE) +
+  labs(title = "Organized Violent Riots by Capital Status",
+       x = "Capital City", y = "Number of Riots") +
+  scale_fill_manual(values = c("Yes" = "#00088B", "No" = "#00BFFF")) +
+  theme_minimal() +
+  theme(panel.grid = element_blank(), axis.text.y = element_text(size = 12),
+        axis.title = element_text(size = 10), plot.title = element_text(face = "bold", size = 10))
+
+# Plot 2: Top actors
+capital_riots <- merged_data %>% filter(PTYPE == 50, CAPITAL == "Yes")
+actor_clean <- capital_riots %>%
+  select(ACTOR1, ACTOR2, ACTOR3) %>%
+  pivot_longer(cols = everything(), names_to = "actor_type", values_to = "actor") %>%
+  filter(!is.na(actor), actor != "99") %>%
+  mutate(actor = str_to_title(actor),
+         actor = case_when(
+           str_detect(actor, "Student") ~ "Students",
+           str_detect(actor, "Demonstrator") ~ "Demonstrators",
+           str_detect(actor, "Protester") ~ "Protesters",
+           str_detect(actor, "Police|Security Force") ~ "Security Forces",
+           TRUE ~ actor
+         )) %>%
+  count(actor, sort = TRUE)
+
+top_actor_names <- c("Students", "Demonstrators", "Security Forces", "Protesters")
+custom_colors <- c(
+  "Students" = "#27408B",
+  "Demonstrators" = "#1874CD",
+  "Security Forces" = "#00BFFF",
+  "Protesters" = "#0000FF"
+)
+
+top_cleaned <- actor_clean %>%
+  filter(actor %in% top_actor_names) %>%
+  mutate(actor = fct_reorder(actor, n))
+
+plot2 <- ggplot(top_cleaned, aes(x = actor, y = n, fill = actor)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  scale_fill_manual(values = custom_colors) +
+  labs(title = "Top Actors in Capital City Riots", x = "Actor", y = "Number of Events") +
+  theme_minimal() +
+  theme(panel.grid = element_blank(), axis.text.y = element_text(size = 12),
+        axis.title = element_text(size = 10), plot.title = element_text(face = "bold", size = 10))
+
+# Plot 3: Riot trends over time
+trend_data <- merged_data %>%
+  filter(PTYPE == 50, !is.na(BYEAR)) %>%
+  group_by(BYEAR, CAPITAL) %>%
+  summarise(Riots = n(), .groups = "drop")
+
+plot3 <- ggplot(trend_data, aes(x = BYEAR, y = Riots, color = CAPITAL)) +
+  geom_line(size = 1) +
+  scale_color_manual(values = c("Yes" = "#00088B", "No" = "#00BFFF")) +
+  labs(title = "Trends in Violent Riots Over Time", x = "Year", y = "Number of Riots", color = "Capital City") +
+  theme_minimal() +
+  theme(panel.grid = element_blank(), axis.text = element_text(size = 12),
+        axis.title = element_text(size = 10), plot.title = element_text(face = "bold", size = 10))
+
+# Combine plots vertically
+combined_plot <- plot1 / plot3 / plot2
+combined_plot
+```
+
+```{r chi-squared-summary, echo=FALSE, results='asis'}
+library(knitr)
+
+# Create riot_event variable if not already created
+merged_data <- merged_data %>%
+  mutate(riot_event = ifelse(PTYPE == 50, "Riot", "Other"))
+
+# Run chi-squared test
+chi_result <- chisq.test(table(merged_data$CAPITAL, merged_data$riot_event))
+
+# Create summary table
+chi_summary <- data.frame(
+  `Test Statistic (χ²)` = round(chi_result$statistic, 2),
+  `Degrees of Freedom` = chi_result$parameter,
+  `p-value` = round(chi_result$p.value, 4)
+)
+
+# Display formatted result
+kable(chi_summary, caption = "Chi-Squared Test: Capital vs Non-Capital Riot Frequency")
+```
+
+# Conclusion
+
+While capital cities report more organized violent riots overall, the difference from non-capitals is not statistically significant. These events often involve both state forces and civilian groups, highlighting persistent tensions in politically important urban centers.
+
+# References
+Thomson, Henry, Karim Bahgat, Henrik Urdal & Halvard Buhaug 2022. "Urban Social Disorder 3.0: A global, city-level event dataset of political mobilization and disorder." Journal of Peace Research, forthcoming

@@ -1,0 +1,218 @@
+---
+title: "Uneven Green: Urban Greenspace Inequality in South Asia"
+author: "Sonika Mahat"
+institute: "American University, SIS-750: Data Analysis"
+date: "2025-04-09"
+output: 
+  beamer_presentation:
+    theme: "Berlin"
+    colortheme: "whale"
+  fontsize: 9pt
+  classoption: "aspectratio=169"
+---
+```{r setup, include=FALSE}
+#Packages
+library(knitr)
+library(rmdformats)
+library(tidyverse)
+#Global options
+knitr::opts_chunk$set(
+  echo = FALSE,
+  prompt = FALSE,
+  tidy = FALSE,
+  comment = NA,
+  message = FALSE,
+  warning = FALSE,
+  fig.align = 'center')
+```
+#  Overview: Motivation and Research Question
+
+##  Motivation
+
+**Why is Greenspace Important in Urban Areas?**
+
+-  Improves air quality, cools cities, and supports biodiversity.  
+-  Promotes physical and mental health, social cohesion, and resilience
+
+In South Asia, urban greenspace is under increasing pressure from rapid population growth and uneven planning.
+
+This study explores how greenspace differs **across countries** and **between cities**, and whether those differences relate to **HDI levels**
+
+-  Note: HDI = Human Development Index
+
+##  Research Question and Key Findings
+
+**Research Question:**  
+
+-  How does urban greenspace vary across South Asian countries?
+-  What patterns emerge when we look at cities, not just country averages?
+-  Are cities in higher-HDI countries more likely to have greener urban areas?
+
+# Data
+
+## Global Greenspace Indicator Dataset  
+
+**Data Source:**  
+-  Stowell, Jennifer. 2023. “Global Greenspace Indicator Dataset.” Harvard Dataverse. https://doi.org/doi:10.7910/DVN/TMWYHB.
+
+**Scope for this Project:**  
+-  Focused on cities in South Asia: India, Nepal, Bangladesh, Pakistan, Sri Lanka, Bhutan, Maldives, Afghanistan.
+
+**Key variables used:**  
+-  `annual_avg_2021`: NDVI score for urban greenspace in 2021  
+-  `City`, `Country`: Used for both national and local comparisons  
+-  `HDI_level`: Categorical variable for Human Development Index (Low/Medium/High)
+
+# Analysis of Dataset: Analysis 1, 2, and 3
+
+## Analysis 1: Greenspace by Country
+
+**Research Question:** How does urban greenspace vary across South Asian countries?
+
+**Method:** calculated the average 2021 NDVI score for cities within each country. This shows overall national patterns, but may mask city-level difference.
+
+## Analysis 1: Greenspace by Country (cont.)
+
+**Visualization:** Bar chart of mean NDVI (2021) for each South Asian country
+```{r analysis1, fig.width=7, fig.height=3, out.width="0.8\\linewidth"}
+# Load packages
+library(tidyverse)
+
+# Read the CSV file
+greenspace_data <- read.csv("greenspace_data_share.csv", encoding = "latin1")
+
+# Define South Asian countries
+south_asia <- c("Afghanistan", "Bangladesh", "Bhutan", "India", 
+                "Maldives", "Nepal", "Pakistan", "Sri Lanka")
+
+# Filter to South Asian countries only
+greenspace_sa <- greenspace_data %>%
+  filter(Country %in% south_asia)
+
+# Remove rows with missing 2021 NDVI values
+greenspace_sa <- greenspace_sa %>%
+  filter(!is.na(annual_avg_2021))
+
+# Calculate average NDVI for each country (2021)
+country_avg <- greenspace_sa %>%
+  group_by(Country) %>%
+  summarise(mean_ndvi_2021 = mean(annual_avg_2021, na.rm = TRUE)) %>%
+  arrange(desc(mean_ndvi_2021))
+
+# Bar chart using average NDVI in 2021 by country
+ggplot(country_avg, aes(x = reorder(Country, -mean_ndvi_2021), 
+                        y = mean_ndvi_2021, 
+                        fill = mean_ndvi_2021)) + 
+  geom_bar(stat = "identity", width = 0.6, show.legend = FALSE) +
+  scale_fill_gradient(low = "#c7e9c0", high = "#006d2c") +
+  expand_limits(y = 0) +
+  labs(
+    title = "Average Urban Greenspace by Country (2021)",
+    x = "Country",
+    y = "Mean NDVI (2021)"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 14),
+    axis.title.y = element_text(margin = margin(r = 10)),
+    axis.title.x = element_text(margin = margin(t = 10))
+  )
+```
+**Takeaway:** Sri Lanka most green, Afghanistan and Maldives least.
+
+## Analysis 2: Greenspace by City
+
+**Research Question:** What patterns emerge when we look at individual cities, not just country averages?
+
+**Method:** Identified the Top 20 cities in South Asia with the highest NDVI scores (2021). Each city is labeled with its country for comparison.
+
+## Analysis 2: Greenspace by City (cont.)
+**Visualization**:
+```{r analysis2, fig.width=7, fig.height=3, out.width="0.8\\linewidth"}
+# Load packages
+library(tidyverse)
+
+greenspace_sa <- greenspace_sa %>%
+  mutate(city_country = paste0(City, " (", Country, ")"))
+
+#top 20 cities of South Asia
+top_20 <- greenspace_sa %>%
+  arrange(desc(annual_avg_2021)) %>%
+  slice_head(n = 20)
+
+custom_colors <- c("India" = "#006d2c",       # dark green
+                   "Sri Lanka" = "#a1d99b",
+                   "Bangladesh" = "#c7e9c0") 
+
+# Plot: Top 20 Cities with two-shade green scheme
+ggplot(top_20, aes(x = reorder(city_country, annual_avg_2021), 
+                   y = annual_avg_2021, fill = Country)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  labs(
+    title = "Top 20 Cities with Highest Urban Greenspace in South Asia (2021)",
+    x = "City (Country)",
+    y = "NDVI Score (2021)"
+  ) +
+  scale_fill_manual(values = custom_colors) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    axis.text.y = element_text(size = 10),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+```
+**Takeaway:** The greenest cities are mostly in India, especially in the south. This shows the importance of looking beyond country averages to understand local variation in urban greenness
+
+## Analysis 3: Greenspace by HDI Level
+**Research Question:** Are cities in more developed (higher-HDI) South Asian countries more likely to have greener urban areas?  
+
+**Method:** Grouped cities into Low, Medium, and High HDI categories. Compared urban greenspace levels (NDVI 2021) using a boxplot and tested for statistical significance with one-way ANOVA.
+
+## Analysis 3: Greenspace by HDI Level (cont.)
+**Visualization:**
+```{r analysis3, fig.width=6, fig.height=3.5, out.width="0.8\\linewidth"}
+# Run ANOVA test
+anova_result <- aov(annual_avg_2021 ~ HDI_level, data = greenspace_sa)
+anova_summary <- summary(anova_result)
+
+# Extract p-value
+p_value <- anova_summary[[1]]["Pr(>F)"][1, 1]
+p_text <- ifelse(p_value < 0.001, "p < 0.001", paste0("p = ", round(p_value, 3)))
+
+# Plot with green fill palette
+ggplot(greenspace_sa, aes(x = HDI_level, y = annual_avg_2021, fill = HDI_level)) +
+  geom_boxplot(show.legend = FALSE, outlier.color = "gray") +
+  scale_fill_manual(values = c(
+    "Low" = "#c7e9c0",       # light green
+    "Medium" = "#74c476",    # medium green
+    "High" = "#238b45"       # dark green
+  )) +
+  labs(
+    title = "Distribution of Urban Greenspace by HDI Level (2021)",
+    x = "HDI Level",
+    y = "NDVI Score"
+  ) +
+  annotate("text", x = 2, y = max(greenspace_sa$annual_avg_2021) + 0.02, 
+           label = p_text, size = 4.5, fontface = "italic") +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+```
+**Takeaway:** Higher-HDI countries are greener than lower-HDI.
+
+##  Conclusion  
+
+-  Urban greenspace is unevenly distributed across South Asia  
+-  While Sri Lanka leads in national average, India has many of the greenest cities  
+-  Cities in higher-HDI countries tend to have more greenspace, and this difference is statistically significant (ANOVA, p < 0.001)  
+- Results suggest that development level matters, both nationally and locally in shaping urban environmental quality
+
+#  Thank you

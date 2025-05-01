@@ -1,10 +1,10 @@
 # Portfolio
 # Introduction
 This portfolio showcases the skills I’ve developed over the semester in data cleaning, analysis, and visualization using R and RMarkdown. It includes four key deliverables that represent different aspects of my learning and growth in this course:
-*Polished slides 
-*Polished research poster 
-*Exemplary code chunk 
-*Analyst resume
+- Polished slides 
+- Polished research poster 
+- Exemplary code chunk 
+- Analyst resume
 I write on detail the changes I made in each of the above deliverables based on feedback in detail below.
 
 # Polished Slide Deck: Revisions Made Based on Feedback
